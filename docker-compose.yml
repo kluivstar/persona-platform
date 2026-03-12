@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: persona_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
+    ports:
+      - "8085:8085"
+
+  api:
+    build: 
+      context: ./api
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://user:password@postgres:5432/persona_platform
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - GOOGLE_CLOUD_PROJECT=test-project
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - pubsub-emulator
+
+  worker:
+    build:
+      context: ./worker
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/persona_platform
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - GOOGLE_CLOUD_PROJECT=test-project
+    depends_on:
+      - postgres
+      - pubsub-emulator
+
+  frontend:
+    build:
+      context: ./frontend/nextjs-dashboard
+    ports:
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

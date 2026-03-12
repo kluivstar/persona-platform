@@ -1,0 +1,21 @@
+{
+    "name": "segment-context-worker",
+    "version": "1.0.0",
+    "main": "worker.js",
+    "scripts": {
+        "start": "node worker.js",
+        "dev": "nodemon worker.js",
+        "test": "jest"
+    },
+    "dependencies": {
+        "@google-cloud/pubsub": "^4.3.3",
+        "@google-cloud/vertexai": "^1.1.0",
+        "pg": "^8.11.3",
+        "dotenv": "^16.4.5",
+        "uuid": "^9.0.1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.0",
+        "jest": "^29.7.0"
+    }
+}
