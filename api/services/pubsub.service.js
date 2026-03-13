@@ -6,7 +6,7 @@ const pubsub = new PubSub({
     // emulator host is handled by environment variable PUBSUB_EMULATOR_HOST
 });
 
-const topicName = process.env.PUBSUB_TOPIC || 'user-events';
+const topicName = process.env.PUBSUB_TOPIC || 'events';
 
 async function publishEvent(event) {
     const dataBuffer = Buffer.from(JSON.stringify(event));

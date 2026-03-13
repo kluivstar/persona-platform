@@ -19,6 +19,18 @@ services:
     ports:
       - "8085:8085"
 
+  pubsub-init:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    volumes:
+      - ./infrastructure/setup-pubsub.sh:/setup-pubsub.sh
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - GOOGLE_CLOUD_PROJECT=test-project
+    entrypoint: /bin/bash
+    command: /setup-pubsub.sh
+    depends_on:
+      - pubsub-emulator
+
   api:
     build: 
       context: ./api
@@ -27,11 +39,13 @@ services:
       - DATABASE_URL=postgresql://user:password@postgres:5432/persona_platform
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - GOOGLE_CLOUD_PROJECT=test-project
+      - PUBSUB_TOPIC=events
     ports:
-      - "3000:3000"
+      - "4000:3000"
     depends_on:
       - postgres
       - pubsub-emulator
+      - pubsub-init
 
   worker:
     build:
@@ -40,17 +54,24 @@ services:
       - DATABASE_URL=postgresql://user:password@postgres:5432/persona_platform
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - GOOGLE_CLOUD_PROJECT=test-project
+      - PUBSUB_TOPIC=events
+      - PUBSUB_SUBSCRIPTION=event-worker-sub
     depends_on:
       - postgres
       - pubsub-emulator
+      - pubsub-init
 
   frontend:
     build:
       context: ./frontend/nextjs-dashboard
+      args:
+        # NEXT_PUBLIC_* vars are baked into the JS bundle at build time
+        NEXT_PUBLIC_API_URL: http://api:3000
+        NEXT_PUBLIC_AI_ENABLED: "true"
     ports:
-      - "3001:3001"
+      - "3001:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NODE_ENV=production
     depends_on:
       - api
 
