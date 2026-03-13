@@ -36,11 +36,11 @@ async function processMessage(messageData) {
 
             // Store/Update Persona
             await client.query(
-                `INSERT INTO personas (tenant_id, user_id, persona, generated_at) 
-                 VALUES ($1, $2, $3, NOW()) 
+                `INSERT INTO personas (tenant_id, user_id, persona, confidence, traits, generated_at) 
+                 VALUES ($1, $2, $3, $4, $5, NOW()) 
                  ON CONFLICT (tenant_id, user_id) 
-                 DO UPDATE SET persona = EXCLUDED.persona, generated_at = NOW()`,
-                [tenant_id, user_id, JSON.stringify(persona)]
+                 DO UPDATE SET persona = EXCLUDED.persona, confidence = EXCLUDED.confidence, traits = EXCLUDED.traits, generated_at = NOW()`,
+                [tenant_id, user_id, persona.persona, persona.confidence, JSON.stringify(persona.traits)]
             );
 
             // Mark event as processed
