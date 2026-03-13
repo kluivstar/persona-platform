@@ -6,7 +6,18 @@ async function processMessage(messageData) {
 
     console.log(`Processing event ${event_id} for user ${user_id}, tenant ${tenant_id}`);
 
-    // 1. Fetch last 50 events for user (Aggregation)
+    // 1. Idempotency Check: See if this event was already fully processed by the worker
+    const processCheck = await db.query(
+        'SELECT processed_by_worker FROM events WHERE event_id = $1',
+        [event_id]
+    );
+
+    if (processCheck.rows.length > 0 && processCheck.rows[0].processed_by_worker) {
+        console.log(`Event ${event_id} already processed by worker. Skipping and acknowledging.`);
+        return { success: true, skipped: true };
+    }
+
+    // 2. Fetch last 50 events for user (Aggregation)
     const eventsResult = await db.query(
         'SELECT event_type, payload, created_at FROM events WHERE user_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 50',
         [user_id, tenant_id]
@@ -14,21 +25,39 @@ async function processMessage(messageData) {
 
     const userEvents = eventsResult.rows;
 
-    // 2. Generate Persona with Vertex AI (Gemini)
+    // 3. Generate Persona with Vertex AI (Gemini)
     try {
         const persona = await ai.generatePersona(userEvents);
 
-        // 3. Store Persona in DB (Atomic update)
-        // Using UPSERT with versioning if needed, but per requirements, simpler unique constraint is enough
-        await db.query(
-            `INSERT INTO personas (tenant_id, user_id, persona, generated_at) 
-             VALUES ($1, $2, $3, NOW()) 
-             ON CONFLICT (tenant_id, user_id) 
-             DO UPDATE SET persona = EXCLUDED.persona, generated_at = NOW()`,
-            [tenant_id, user_id, JSON.stringify(persona)]
-        );
+        // 4. Atomic Transaction: Store Persona AND mark event as processed
+        const client = await db.pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        console.log(`Persona generated and stored for user ${user_id}`);
+            // Store/Update Persona
+            await client.query(
+                `INSERT INTO personas (tenant_id, user_id, persona, generated_at) 
+                 VALUES ($1, $2, $3, NOW()) 
+                 ON CONFLICT (tenant_id, user_id) 
+                 DO UPDATE SET persona = EXCLUDED.persona, generated_at = NOW()`,
+                [tenant_id, user_id, JSON.stringify(persona)]
+            );
+
+            // Mark event as processed
+            await client.query(
+                'UPDATE events SET processed_by_worker = TRUE WHERE event_id = $1',
+                [event_id]
+            );
+
+            await client.query('COMMIT');
+            console.log(`Persona generated and event ${event_id} marked as processed.`);
+        } catch (dbError) {
+            await client.query('ROLLBACK');
+            throw dbError;
+        } finally {
+            client.release();
+        }
+
         return { success: true };
     } catch (error) {
         console.error(`Failed to process persona for user ${user_id}:`, error);

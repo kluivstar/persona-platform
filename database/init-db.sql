@@ -2,6 +2,13 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE TABLE IF NOT EXISTS tenants (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL,
+    api_key TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     event_id UUID UNIQUE NOT NULL,
@@ -9,6 +16,7 @@ CREATE TABLE IF NOT EXISTS events (
     user_id TEXT NOT NULL,
     event_type TEXT NOT NULL,
     payload JSONB NOT NULL,
+    processed_by_worker BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
