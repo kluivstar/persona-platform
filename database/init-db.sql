@@ -27,10 +27,11 @@ CREATE TABLE IF NOT EXISTS personas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
-    persona TEXT NOT NULL,
+    persona_text TEXT NOT NULL,
     confidence DOUBLE PRECISION NOT NULL,
     traits JSONB NOT NULL,
-    generated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(tenant_id, user_id)
 );
 

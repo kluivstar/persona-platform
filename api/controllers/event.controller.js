@@ -21,21 +21,38 @@ async function ingestEvent(req, res) {
 
 async function getPersona(req, res) {
     const { userId } = req.params;
-    const tenantId = req.headers['x-tenant-id'] || 'default'; // Simple tenant isolation via header
+    const tenantId = req.query.tenant_id || req.query.tenantId || req.headers['x-tenant-id'] || 'default';
 
     try {
-        const persona = await eventService.getPersona(userId, tenantId);
+        const { persona } = await eventService.getPersona(userId, tenantId);
         if (!persona) {
-            return res.status(404).json({ error: 'Persona not found' });
+            return res.status(200).json({ status: "PROCESSING" });
         }
-        return res.json(persona);
+        return res.json({ persona });
     } catch (error) {
         console.error('Error fetching persona:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
 
+
+const sse = require('../services/sse.service');
+
+async function streamEvents(req, res) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const removeClient = sse.addClient(res);
+
+    req.on('close', () => {
+        removeClient();
+    });
+}
+
 module.exports = {
     ingestEvent,
-    getPersona
+    getPersona,
+    streamEvents
 };

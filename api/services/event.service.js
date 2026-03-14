@@ -1,5 +1,6 @@
 const db = require('./db.service');
 const pubsub = require('./pubsub.service');
+const sse = require('./sse.service');
 const Joi = require('joi');
 
 const eventSchema = Joi.object({
@@ -28,31 +29,40 @@ async function processEvent(event) {
         return { alreadyProcessed: true };
     }
 
-    // 3. Store Event (Initial Ingestion)
-    await db.query(
-        'INSERT INTO events (event_id, tenant_id, user_id, event_type, payload) VALUES ($1, $2, $3, $4, $5)',
-        [event.event_id, event.tenant_id, event.user_id, event.event_type, JSON.stringify(event.payload)]
-    );
-
-    // 4. Publish to Pub/Sub
+    // 3. Publish to Pub/Sub
     const pubsubEvent = {
         ...event,
         timestamp: new Date().toISOString()
     };
     await pubsub.publishEvent(pubsubEvent);
+    sse.broadcastEvent(pubsubEvent);
 
     return { success: true };
 }
 
 async function getPersona(userId, tenantId) {
     const result = await db.query(
-        'SELECT persona, generated_at FROM personas WHERE user_id = $1 AND tenant_id = $2',
+        'SELECT * FROM personas WHERE user_id = $1 AND tenant_id = $2',
         [userId, tenantId]
     );
-    return result.rows[0];
+    if (result.rows.length > 0) {
+        console.log(`[API] Persona retrieved for tenant ${tenantId} and user ${userId}`);
+        return { persona: result.rows[0] };
+    }
+
+    return { persona: null };
+}
+
+async function getAvailableTenants(userId) {
+    const result = await db.query(
+        'SELECT DISTINCT tenant_id FROM personas WHERE user_id = $1',
+        [userId]
+    );
+    return result.rows.map(r => r.tenant_id);
 }
 
 module.exports = {
     processEvent,
-    getPersona
+    getPersona,
+    getAvailableTenants
 };

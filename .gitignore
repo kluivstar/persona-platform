@@ -32,3 +32,8 @@ next-env.d.ts
 
 # Docker
 .dockerignore
+
+# Secrets and Logs
+gcp-key.json
+push_error.txt
+push_error_utf8.txt

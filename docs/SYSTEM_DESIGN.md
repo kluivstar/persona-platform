@@ -4,9 +4,9 @@
 The Segment-to-Context Service is a high-throughput, event-driven platform designed for enterprise user analytics. It ingests raw JSON event data and uses Vertex AI (Gemini 1.5 Flash) to generate enriched user personas.
 
 ### Components
-1. **API Service (Ingestion Layer)**: A Node.js/Express service that validates incoming events, ensures idempotency, and publishes messages to Google Cloud Pub/Sub.
-2. **Pub/Sub (Message Broker)**: Decouples ingestion from processing, allowing for high concurrency and reliable retries.
-3. **Worker Service (Context Aggregator)**: Consumes events, aggregates the last 50 events for a specific user from PostgreSQL, and interacts with Vertex AI.
+1. **API Service (Ingestion Layer)**: A high-throughput Node.js/Express service that validates incoming events and publishes messages directly to Google Cloud Pub/Sub. Persistence is deferred to the worker to handle bursts gracefully.
+2. **Pub/Sub (Message Broker)**: Decouples ingestion from processing, serving as the "Golden Path" buffer for high-concurrency traffic.
+3. **Worker Service (Context Aggregator & Persistence)**: Consumes events, persists raw event data to PostgreSQL, aggregates the last 50 events for context, and interacts with Vertex AI.
 4. **Vertex AI (Intelligence Layer)**: Uses Gemini 1.5 Flash to transform raw event history into structured JSON personas.
 5. **PostgreSQL (Persistence Layer)**: Stores events for historical context and the final generated personas with strict tenant isolation.
 6. **Next.js Dashboard (Presentation Layer)**: Provides a real-time view of ingested events and a searchable directory of user personas.

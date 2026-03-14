@@ -114,7 +114,7 @@ The services use the following environment variables. You can create `.env` file
 Once everything is running, you can test the ingestion pipeline with a sample event:
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/events \
+curl -X POST http://localhost:4000/api/v1/events \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "550e8400-e29b-41d4-a716-446655440000",

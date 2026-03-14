@@ -7,6 +7,7 @@ A high-performance platform for real-time user event ingestion and AI-driven per
 - **AI-Powered**: Integrates with Vertex AI (Gemini) for deep user context.
 - **Multi-tenant**: Built-in data isolation for enterprise scale.
 - **Real-time**: Next.js dashboard with live event streaming.
+- **Documented**: Comprehensive **[System Design](docs/SYSTEM_DESIGN.md)** and **[AI Journey](AI_JOURNEY.md)** logs.
 
 ## Getting Started
 
